@@ -34,6 +34,7 @@ class TaskAdapter(context: Context) : BaseAdapter() {
 
         val textView1 = view.findViewById<TextView>(R.id.text1)
         val textView2 = view.findViewById<TextView>(R.id.text2)
+        //val textView3 = view.findViewById<TextView>(R.id.text3)
 
         textView1.text = taskList[position].title
         textView2.text = taskList[position].date

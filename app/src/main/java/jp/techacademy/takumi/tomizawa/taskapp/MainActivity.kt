@@ -92,8 +92,6 @@ class MainActivity : AppCompatActivity() {
             val filteredByTask = realm.query<Task>("category = $0", condition).find()
 
             taskAdapter.updateTaskList(filteredByTask)
-
-
         }
 
         // TaskAdapterを生成し、ListViewに設定する
@@ -155,24 +153,6 @@ class MainActivity : AppCompatActivity() {
         realm = Realm.open(config)
 
 
-        // Realmからタスクの一覧を取得
-        val tasks = realm.query<Task>().sort("date", Sort.DESCENDING).find()
-
-        // Realmが起動、または更新（追加、変更、削除）時にreloadListViewを実行する
-        CoroutineScope(Dispatchers.Default).launch {
-            tasks.asFlow().collect {
-                when (it) {
-                    // 更新時
-                    is UpdatedResults -> reloadListView(it.list)
-                    // 起動時
-                    is InitialResults -> reloadListView(it.list)
-                    else -> {}
-                }
-            }
-        }
-    }
-
-    fun getTask(){
         // Realmからタスクの一覧を取得
         val tasks = realm.query<Task>().sort("date", Sort.DESCENDING).find()
 

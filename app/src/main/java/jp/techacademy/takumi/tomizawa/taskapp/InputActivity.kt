@@ -132,6 +132,7 @@ class InputActivity : AppCompatActivity() {
             // taskの値を画面項目に反映
             binding.content.titleEditText.setText(task.title)
             binding.content.contentEditText.setText(task.contents)
+            binding.content.categoryEditText.setText(task.category)
         }
 
         // 日付と時刻のボタンの表示を設定
