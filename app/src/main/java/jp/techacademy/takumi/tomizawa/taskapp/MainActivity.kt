@@ -9,6 +9,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -18,24 +22,25 @@ import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
 import io.realm.kotlin.notifications.InitialResults
 import io.realm.kotlin.notifications.UpdatedResults
-import io.realm.kotlin.query.RealmResults
 import io.realm.kotlin.query.Sort
 import jp.techacademy.takumi.tomizawa.taskapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.*
 
 const val EXTRA_TASK = "jp.techacademy.takumi.tomizawa.taskapp.TASK"
+const val EXTRA_CATEGORY = "jp.techacademy.takumi.tomizawa.taskapp.CATEGORY"
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
     private lateinit var taskAdapter: TaskAdapter
     private lateinit var realm: Realm
+    private lateinit var realm1: Realm
 
     private val requestPermissonLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()){isGranted ->
-            if(isGranted){
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
                 // 権限が許可された
-                Log.d("ANDROID","許可された")
+                Log.d("ANDROID", "許可された")
             } else {
                 //　権限が拒否された
                 Log.d("ANDROID", "許可されなかった")
@@ -52,15 +57,15 @@ class MainActivity : AppCompatActivity() {
             // 通知権限が許可されているか確認する
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
                 // 権限許可済
-                Log.d("ANDROID","許可されている")
-            }else {
+                Log.d("ANDROID", "許可されている")
+            } else {
                 // 許可されていないので許可ダイアログを表示する
-                Log.d("ANDROID","許可されていない")
+                Log.d("ANDROID", "許可されていない")
                 requestPermissonLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         } else {
             // APIレベル33以前のため、アプリ毎の通知設定を確認する
-            if( !NotificationManagerCompat.from(this).areNotificationsEnabled()){
+            if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
                 // OSバージョン確認（APIレベル26以上）
                 val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     // APIレベルが26以上なので、直接通知の設定画面に遷移する
@@ -84,14 +89,6 @@ class MainActivity : AppCompatActivity() {
         binding.fab.setOnClickListener {
             val intent = Intent(this, InputActivity::class.java)
             startActivity(intent)
-        }
-
-        // 検索ボタンを押した時の処理
-        binding.searchButton.setOnClickListener{
-            val condition = binding.searchEditText.text.toString()
-            val filteredByTask = realm.query<Task>("category = $0", condition).find()
-
-            taskAdapter.updateTaskList(filteredByTask)
         }
 
         // TaskAdapterを生成し、ListViewに設定する
@@ -152,7 +149,6 @@ class MainActivity : AppCompatActivity() {
         val config = RealmConfiguration.create(schema = setOf(Task::class))
         realm = Realm.open(config)
 
-
         // Realmからタスクの一覧を取得
         val tasks = realm.query<Task>().sort("date", Sort.DESCENDING).find()
 
@@ -166,6 +162,61 @@ class MainActivity : AppCompatActivity() {
                     is InitialResults -> reloadListView(it.list)
                     else -> {}
                 }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Realmデータベースとの接続を開く(Category用)
+        val config1 = RealmConfiguration.create(schema = setOf(Category::class))
+        realm1 = Realm.open(config1)
+
+        val maxCategoryId = (realm1.query<Category>().max("id", Int::class).find() ?: -1)
+
+        // Realmからカテゴリの一覧を取得
+        val categoryes = realm1.query<Category>().find()
+
+        var spinnerItems = mutableListOf<String>()
+
+        // Spinnerの取得
+        val spinner = findViewById<Spinner>(R.id.spinnerMain)
+
+        for (i in 0..maxCategoryId) {
+
+            spinnerItems.add(categoryes[i].contents)
+
+        }
+        // Adapterの生成
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerItems)
+
+        // AdapterをSpinnerのAdapterとして設定
+        spinner.adapter = adapter
+
+        // 選択肢の各項目のレイアウト
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+
+            override fun onItemSelected(
+                adapter: AdapterView<*>?, view: View?,
+                position: Int, id: Long
+            ) {
+
+                val item = adapter?.selectedItemId
+
+                val categoryId = item!!.toInt()
+
+                val filteredByCategory = realm.query<Task>("category_id = $0", categoryId).find()
+
+                taskAdapter.updateTaskList(filteredByCategory)
+
+            }
+
+            override fun onNothingSelected(adapterView: AdapterView<*>?) {
+                // 選択されなかった場合
+
             }
         }
     }

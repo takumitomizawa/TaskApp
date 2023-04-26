@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Makecategory">
+
+    <EditText
+        android:id="@+id/category_text"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="@string/input_title_hint"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        tools:ignore="VisualLintTextFieldSize" />
+
+    <Button
+        android:id="@+id/add_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_below="@id/category_text"
+        android:text="@string/input_make_category"
+        tools:ignore="VisualLintButtonSize" />
+
+    <Button
+        android:id="@+id/back_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="150dp"
+        android:layout_below="@id/category_text"
+        android:text="@string/back_button"
+        tools:ignore="VisualLintButtonSize" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

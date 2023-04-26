@@ -9,4 +9,6 @@
     <string name="button_done_text">決定</string>
     <string name="input_category_hint">カテゴリ</string>
     <string name="input_search_category">検索</string>
+    <string name="input_make_category">カテゴリ作成</string>
+    <string name="back_button">戻る</string>
 </resources>

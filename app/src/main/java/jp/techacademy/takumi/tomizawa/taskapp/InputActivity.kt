@@ -7,24 +7,31 @@ import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
+import io.realm.kotlin.delete
 import io.realm.kotlin.ext.query
+import io.realm.kotlin.query.Sort
 import jp.techacademy.takumi.tomizawa.taskapp.databinding.ActivityInputBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.Locale.Category
-
+import android.os.Handler
+import android.os.Looper
+import androidx.core.text.isDigitsOnly
 
 class InputActivity : AppCompatActivity() {
     private lateinit var binding: ActivityInputBinding
-
+    private var handler = Handler(Looper.getMainLooper())
     private lateinit var realm: Realm
+    private lateinit var realm1: Realm
     private lateinit var task: Task
     private lateinit var category: Category
     private var calendar = Calendar.getInstance(Locale.JAPANESE)
@@ -33,6 +40,14 @@ class InputActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityInputBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Realmデータベースとの接続を開く(Task用)
+        val config = RealmConfiguration.create(schema = setOf(Task::class))
+        realm = Realm.open(config)
+
+        // Realmデータベースとの接続を開く(Category用)
+        val config1 = RealmConfiguration.create(schema = setOf(Category::class))
+        realm1 = Realm.open(config1)
 
         // アクションバーの設定
         setSupportActionBar(binding.toolbar)
@@ -44,17 +59,51 @@ class InputActivity : AppCompatActivity() {
         binding.content.dateButton.setOnClickListener(dateClickListener)
         binding.content.timeButton.setOnClickListener(timeClickListener)
         binding.content.doneButton.setOnClickListener(doneClickListener)
+        binding.content.makeButton.setOnClickListener {
+            val intent = Intent(this, Makecategory::class.java)
+            startActivity(intent)
+        }
 
         // EXTRA_TASKからTaskのidを取得
         val intent = intent
         val taskId = intent.getIntExtra(EXTRA_TASK, -1)
 
-        // Realmデータベースとの接続を開く
-        val config = RealmConfiguration.create(schema = setOf(Task::class))
-        realm = Realm.open(config)
-
         // タスクを取得または初期化
         initTask(taskId)
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Realmデータベースとの接続を開く(Category用)
+        val config1 = RealmConfiguration.create(schema = setOf(Category::class))
+        realm1 = Realm.open(config1)
+
+        val maxCategoryId = (realm1.query<Category>().max("id", Int::class).find() ?: -1)
+
+        // Realmからカテゴリの一覧を取得
+        val categoryes = realm1.query<Category>().find()
+
+        var spinnerItems = mutableListOf<String>()
+
+        for (i in 0..maxCategoryId) {
+
+            spinnerItems.add(categoryes[i].contents)
+
+            // Spinnerの取得
+            val spinner = findViewById<Spinner>(R.id.spinner)
+
+            // Adapterの生成
+            val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerItems)
+
+            // 選択肢の各項目のレイアウト
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+            // AdapterをSpinnerのAdapterとして設定
+            spinner.adapter = adapter
+        }
+
     }
 
     override fun onDestroy() {
@@ -109,9 +158,12 @@ class InputActivity : AppCompatActivity() {
     /**
      * タスクを取得または初期化
      */
+
     private fun initTask(taskId: Int) {
         // 引数のtaskIdに合致するタスクを検索
         val findTask = realm.query<Task>("id==$taskId").first().find()
+        val spinner = findViewById<Spinner>(R.id.spinner)
+
 
         if (findTask == null) {
             // 新規作成の場合
@@ -132,7 +184,10 @@ class InputActivity : AppCompatActivity() {
             // taskの値を画面項目に反映
             binding.content.titleEditText.setText(task.title)
             binding.content.contentEditText.setText(task.contents)
-            binding.content.categoryEditText.setText(task.category)
+            handler.post() {
+                spinner.setSelection(task.category_id)
+            }
+            //binding.content.categoryEditText.setText(task.category)
         }
 
         // 日付と時刻のボタンの表示を設定
@@ -145,12 +200,12 @@ class InputActivity : AppCompatActivity() {
     private suspend fun addTask() {
         // 日付型オブジェクトを文字列に変換用
         val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPANESE)
-
+        val spinner = findViewById<Spinner>(R.id.spinner)
         // 登録（更新）する値を取得
         val title = binding.content.titleEditText.text.toString()
         val content = binding.content.contentEditText.text.toString()
-        val category = binding.content.categoryEditText.text.toString()
         val date = simpleDateFormat.format(calendar.time)
+        val setId = spinner.selectedItemPosition
 
         if (task.id == -1) {
             // 登録
@@ -160,12 +215,13 @@ class InputActivity : AppCompatActivity() {
             // 画面項目の値で更新
             task.title = title
             task.contents = content
-            task.category = category
+            task.category_id = setId
             task.date = date
 
             // 登録処理
             realm.writeBlocking {
                 copyToRealm(task)
+                Log.d("category_id", task.category_id.toString())
             }
         } else {
             // 更新
@@ -174,7 +230,8 @@ class InputActivity : AppCompatActivity() {
                     // 画面項目の値で更新
                     this.title = title
                     this.contents = content
-                    this.category = category
+                    this.category_id = setId
+                    Log.d("category_id更新", this.category_id.toString())
                     this.date = date
                 }
             }
@@ -203,6 +260,5 @@ class InputActivity : AppCompatActivity() {
 
         val timeFormat = SimpleDateFormat("HH:mm", Locale.JAPANESE)
         binding.content.timeButton.text = timeFormat.format(calendar.time)
-
     }
 }
