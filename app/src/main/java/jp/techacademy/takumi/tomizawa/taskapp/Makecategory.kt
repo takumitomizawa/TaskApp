@@ -41,8 +41,7 @@ class Makecategory : AppCompatActivity() {
 
 
         binding.backButton.setOnClickListener {
-            val intent = Intent(this, InputActivity::class.java)
-            startActivity(intent)
+            finish()
         }
     }
 
